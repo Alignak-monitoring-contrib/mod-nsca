@@ -45,7 +45,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# This Class is an NSCA Arbiter module
+# This Class is an NSCA receiver module
 # Here for the configuration phase AND running one
 
 import time
@@ -61,7 +61,7 @@ from alignak.log import logger
 from alignak.external_command import ExternalCommand
 
 properties = {
-    'daemons': ['arbiter', 'receiver'],
+    'daemons': ['receiver'],
     'type': 'nsca',
     'external': True,
     'phases': ['running'],
@@ -77,7 +77,7 @@ def decrypt_xor(data, key):
 
 def get_instance(mod_conf):
     """ Return a module instance for the plugin manager """
-    logger.info("Get a NSCA arbiter module for plugin %s" % mod_conf.get_name())
+    logger.info("Get a NSCA receiver module for plugin %s" % mod_conf.get_name())
 
     host = getattr(mod_conf, 'host', '127.0.0.1')
     if host == '*':
@@ -99,13 +99,13 @@ def get_instance(mod_conf):
     max_packet_age = min(int(getattr(mod_conf, 'max_packet_age', '30')), 900)
     check_future_packet = bool(getattr(mod_conf, 'check_future_packet', 'False'))
 
-    instance = NSCA_arbiter(mod_conf, host, port,
+    instance = NSCA_receiver(mod_conf, host, port,
             buffer_length, payload_length, encryption_method, password, max_packet_age, check_future_packet,
             backlog)
     return instance
 
 
-class NSCA_arbiter(BaseModule):
+class NSCA_receiver(BaseModule):
     """Please Add a Docstring to describe the class here"""
 
     def __init__(self, modconf, host, port, buffer_length, payload_length, encryption_method, password, max_packet_age, check_future_packet, backlog):
@@ -202,7 +202,7 @@ class NSCA_arbiter(BaseModule):
 
     def post_command(self, timestamp, rc, hostname, service, output):
         '''
-        Send a check result command to the arbiter
+        Send a check result command to the receiver
         '''
         if not service:
             extcmd = "[%lu] PROCESS_HOST_CHECK_RESULT;%s;%d;%s\n" % \
