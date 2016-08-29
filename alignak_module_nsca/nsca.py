@@ -82,7 +82,7 @@ def get_instance(mod_conf):
     host = getattr(mod_conf, 'host', '127.0.0.1')
     if host == '*':
         host = ''
-    
+
     port = int(getattr(mod_conf, 'port', '5667'))
     buffer_length = int(getattr(mod_conf, 'buffer_length', '4096'))
     payload_length = int(getattr(mod_conf, 'payload_length', '-1'))
@@ -119,7 +119,7 @@ class NSCA_receiver(BaseModule):
         self.password = password
         self.rng = random.Random(password)
         self.max_packet_age = max_packet_age
-        self.check_future_packet = check_future_packet 
+        self.check_future_packet = check_future_packet
         logger.info("[NSCA] configuration, allowed hosts : '%s'(%s), buffer length: %s, payload length: %s, encryption: %s, max packet age: %s, check future packet: %s, backlog: %d", self.host, self.port, self.buffer_length, self.payload_length, self.encryption_method, self.max_packet_age, self.check_future_packet, self.backlog)
 
     def send_init_packet(self, sock):
@@ -193,7 +193,7 @@ class NSCA_receiver(BaseModule):
             hostname = hostname_dirty.split("\0", 1)[0]
             service = service_dirty.split("\0", 1)[0]
             output = output_dirty.split("\0", 1)[0]
-            logger.debug("[NSCA] Decoded NSCA packet: host/service: %s/%s, timestamp: %d, output: %s", hostname, service, timestamp, output[:32])
+            logger.warning("[NSCA] Decoded NSCA packet: host/service: %s/%s, timestamp: %d, output: %s", hostname, service, timestamp, output[:32])
             return (timestamp, rc, hostname, service, output)
         except Exception as e:
             logger.warning("[NSCA] Unable to decode NSCA packet: %s", str(e))
@@ -204,14 +204,13 @@ class NSCA_receiver(BaseModule):
         '''
         Send a check result command to the receiver
         '''
-        if not service:
+        if not service or service=='host_check':
             extcmd = "[%lu] PROCESS_HOST_CHECK_RESULT;%s;%d;%s\n" % \
                 (timestamp, hostname, rc, output)
         else:
             extcmd = "[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n" % \
                 (timestamp, hostname, service, rc, output)
 
-        logger.debug("[NSCA] external command sent: %s" % (extcmd))
         e = ExternalCommand(extcmd)
         self.from_q.put(e)
 
@@ -221,16 +220,14 @@ class NSCA_receiver(BaseModule):
             logger.warning("[NSCA] Received an empty NSCA packet")
             return
 
-        logger.debug("[NSCA] Received NSCA packet: %s", binascii.hexlify(databuffer))
-
         payload_length = len(databuffer) - 208
         if payload_length != 512 and payload_length != 4096:
             logger.warning("[NSCA] Received packet with unusual payload length: %d.", payload_length)
-            
+
         if self.payload_length != -1 and payload_length != self.payload_length:
             logger.warning("[NSCA] Dropping packet with incorrect payload length.")
             return
-            
+
         (timestamp, rc, hostname, service, output) = self.read_check_result(databuffer, IV, payload_length)
         current_time = time.time()
         check_result_age = current_time - timestamp
@@ -282,7 +279,7 @@ class NSCA_receiver(BaseModule):
                     except Exception as e:
                         logger.warning("[NSCA] Exception on socket receiving: %s", str(e))
                         continue
-                        
+
                     if len(data) == 0:
                         self.process_check_result(databuffer[s], IVs[s])
                         try:
