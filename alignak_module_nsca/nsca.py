@@ -176,16 +176,17 @@ class NSCA_receiver(BaseModule):
         }init_packet;
         '''
 
+        received_data = data
         if self.encryption_method == 1:
             data = decrypt_xor(data, self.password)
             data = decrypt_xor(data, iv)
             logger.debug("[NSCA] Decrypted NSCA packet: %s", binascii.hexlify(data))
 
-        try:
-            # Python pack format for NSCA C structure
-            # Depending on requested payload length
-            unpackFormat = "!hhIIh64s128s%ssh" % payload_length
+        # Python pack format for NSCA C structure
+        # Depending on requested payload length
+        unpackFormat = "!hhIIh64s128s%ssh" % payload_length
 
+        try:
             # version, pad1, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty, pad2
             # are the name of unpacked structure elements
             (version, pad, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty, _) = \
@@ -197,8 +198,23 @@ class NSCA_receiver(BaseModule):
             return (timestamp, rc, hostname, service, output)
         except Exception as e:
             logger.warning("[NSCA] Unable to decode NSCA packet: %s", str(e))
-            logger.warning("[NSCA] Faulty NSCA packet content: %s", binascii.hexlify(data))
-            return (0, 0, '', '', '')
+            logger.warning("[NSCA] Trying without encryption")
+
+            try:
+                # version, pad1, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty, pad2
+                # are the name of unpacked structure elements
+                (version, pad, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty, _) = \
+                    struct.unpack(unpackFormat, received_data)
+                hostname = hostname_dirty.split("\0", 1)[0]
+                service = service_dirty.split("\0", 1)[0]
+                output = output_dirty.split("\0", 1)[0]
+                logger.warning("[NSCA] Decoded NSCA packet: host/service: %s/%s, timestamp: %d, output: %s",
+                               hostname, service, timestamp, output[:32])
+                return (timestamp, rc, hostname, service, output)
+            except Exception as e:
+                logger.warning("[NSCA] Unable to decode NSCA packet: %s", str(e))
+                logger.warning("[NSCA] Faulty NSCA packet content: %s", binascii.hexlify(data))
+                return (0, 0, '', '', '')
 
     def post_command(self, timestamp, rc, hostname, service, output):
         '''
