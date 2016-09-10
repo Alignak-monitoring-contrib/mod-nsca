@@ -108,6 +108,8 @@ class NSCA_receiver(BaseModule):
         self.max_packet_age = min(int(getattr(mod_conf, 'max_packet_age', '30')), 900)
         self.check_future_packet = bool(getattr(mod_conf, 'check_future_packet', 'False'))
 
+        self.output_decoding = getattr(mod_conf, 'output_decoding', 'UTF-8')
+
         self.rng = random.Random(self.password)
 
         logger.info(
@@ -189,7 +191,8 @@ class NSCA_receiver(BaseModule):
             hostname = hostname_dirty.split("\0", 1)[0]
             service = service_dirty.split("\0", 1)[0]
             output = output_dirty.split("\0", 1)[0]
-            output = output.decode(encoding='UTF-8', errors='ignore')
+            output = output.decode(encoding=self.output_decoding, errors='ignore')
+
             # Output only the 64 first bytes of the output ... beware if some specific encoding
             # occurs after :)
             logger.info(
