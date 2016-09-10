@@ -70,71 +70,66 @@ properties = {
 
 def decrypt_xor(data, key):
     keylen = len(key)
-    crypted = [chr(ord(data[i]) ^ ord(key[i % keylen]))
-            for i in xrange(len(data))]
+    crypted = [chr(ord(data[i]) ^ ord(key[i % keylen])) for i in xrange(len(data))]
     return ''.join(crypted)
 
 
 def get_instance(mod_conf):
     """ Return a module instance for the plugin manager """
-    logger.info("Get a NSCA receiver module for plugin %s" % mod_conf.get_name())
+    logger.info("Get a NSCA receiver module for plugin %s", mod_conf.get_name())
 
-    host = getattr(mod_conf, 'host', '127.0.0.1')
-    if host == '*':
-        host = ''
-
-    port = int(getattr(mod_conf, 'port', '5667'))
-    buffer_length = int(getattr(mod_conf, 'buffer_length', '4096'))
-    payload_length = int(getattr(mod_conf, 'payload_length', '-1'))
-    encryption_method = int(getattr(mod_conf, 'encryption_method', '0'))
-
-    backlog = int(getattr(mod_conf, 'backlog', '10'))
-
-    password = getattr(mod_conf, 'password', '')
-    if password == "" and encryption_method != 0:
-        logger.error("[NSCA] No password specified whereas there is a encryption_method defined")
-        logger.warning("[NSCA] Setting password to dummy to avoid crash!")
-        password = "dummy"
-
-    max_packet_age = min(int(getattr(mod_conf, 'max_packet_age', '30')), 900)
-    check_future_packet = bool(getattr(mod_conf, 'check_future_packet', 'False'))
-
-    instance = NSCA_receiver(mod_conf, host, port,
-            buffer_length, payload_length, encryption_method, password, max_packet_age, check_future_packet,
-            backlog)
+    instance = NSCA_receiver(mod_conf)
     return instance
 
 
 class NSCA_receiver(BaseModule):
     """Please Add a Docstring to describe the class here"""
 
-    def __init__(self, modconf, host, port, buffer_length, payload_length, encryption_method, password, max_packet_age, check_future_packet, backlog):
-        BaseModule.__init__(self, modconf)
-        self.host = host
-        self.port = port
-        self.backlog = backlog
-        self.buffer_length = buffer_length
-        self.payload_length = payload_length
-        self.encryption_method = encryption_method
-        self.password = password
-        self.rng = random.Random(password)
-        self.max_packet_age = max_packet_age
-        self.check_future_packet = check_future_packet
-        logger.info("[NSCA] configuration, allowed hosts : '%s'(%s), buffer length: %s, payload length: %s, encryption: %s, max packet age: %s, check future packet: %s, backlog: %d", self.host, self.port, self.buffer_length, self.payload_length, self.encryption_method, self.max_packet_age, self.check_future_packet, self.backlog)
+    def __init__(self, mod_conf):
+        BaseModule.__init__(self, mod_conf)
+
+        self.host = getattr(mod_conf, 'host', '127.0.0.1')
+        if self.host == '*':
+            self.host = ''
+        self.port = int(getattr(mod_conf, 'port', '5667'))
+
+        self.backlog = int(getattr(mod_conf, 'backlog', '10'))
+
+        self.buffer_length = int(getattr(mod_conf, 'buffer_length', '4096'))
+        self.payload_length = int(getattr(mod_conf, 'payload_length', '-1'))
+
+        self.encryption_method = int(getattr(mod_conf, 'encryption_method', '0'))
+        self.password = getattr(mod_conf, 'password', '')
+        if self.password == "" and self.encryption_method != 0:
+            logger.error("[NSCA] No password specified whereas an encryption method is defined")
+            logger.warning("[NSCA] Setting password to 'dummy' to avoid crash!")
+            self.password = "dummy"
+
+        self.max_packet_age = min(int(getattr(mod_conf, 'max_packet_age', '30')), 900)
+        self.check_future_packet = bool(getattr(mod_conf, 'check_future_packet', 'False'))
+
+        self.rng = random.Random(self.password)
+
+        logger.info(
+            "[NSCA] configuration, allowed hosts : '%s'(%s), buffer length: %s, "
+            "payload length: %s, encryption: %s, max packet age: %s, check future packet: %s, "
+            "backlog: %d",
+            self.host, self.port, self.buffer_length, self.payload_length,
+            self.encryption_method, self.max_packet_age, self.check_future_packet, self.backlog)
 
     def send_init_packet(self, sock):
-        '''
+        """
         Build an init packet
          00-127: IV
          128-131: unix timestamp
-        '''
+        """
         iv = ''.join([chr(self.rng.randrange(256)) for i in xrange(128)])
         init_packet = struct.pack("!128sI", iv, int(time.time()))
         sock.send(init_packet)
         return iv
 
     def read_check_result(self, data, iv, payload_length):
-        '''
+        """
         Read the check result
 
         The !hhIIh64s128s512sh is the description of the packet.
@@ -156,7 +151,8 @@ class NSCA_receiver(BaseModule):
         #define MAX_PLUGINOUTPUT_LENGTH     4096
 
         #define OLD_PLUGINOUTPUT_LENGTH     512
-        #define OLD_PACKET_LENGTH (( sizeof( data_packet) - ( MAX_PLUGINOUTPUT_LENGTH - OLD_PLUGINOUTPUT_LENGTH)))
+        #define OLD_PACKET_LENGTH (( sizeof( data_packet) -
+                                   ( MAX_PLUGINOUTPUT_LENGTH - OLD_PLUGINOUTPUT_LENGTH)))
 
         /* data packet containing service check results */
         typedef struct data_packet_struct{
@@ -174,7 +170,7 @@ class NSCA_receiver(BaseModule):
             char      iv[TRANSMITTED_IV_SIZE];
             u_int32_t timestamp;
         }init_packet;
-        '''
+        """
 
         if self.encryption_method == 1:
             data = decrypt_xor(data, self.password)
@@ -184,37 +180,39 @@ class NSCA_receiver(BaseModule):
         try:
             # Python pack format for NSCA C structure
             # Depending on requested payload length
-            unpackFormat = "!hhIIh64s128s%ssh" % payload_length
+            unpack_format = "!hhIIh64s128s%ssh" % payload_length
 
             # version, pad1, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty, pad2
             # are the name of unpacked structure elements
             (version, pad, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty, _) = \
-                struct.unpack(unpackFormat, data)
+                struct.unpack(unpack_format, data)
             hostname = hostname_dirty.split("\0", 1)[0]
             service = service_dirty.split("\0", 1)[0]
             output = output_dirty.split("\0", 1)[0]
             output = output.decode(encoding='UTF-8', errors='ignore')
+            # Output only the 64 first bytes of the output ... beware if some specific encoding
+            # occurs after :)
             logger.info(
                 "[NSCA] Decoded NSCA packet: host/service: %s/%s, timestamp: %d, output: %s",
-                hostname, service, timestamp, output[:32]
+                hostname, service, timestamp, output[:64]
             )
             logger.debug("[NSCA] Decoded NSCA packet: output: --/%s/--", output)
-            return (timestamp, rc, hostname, service, output)
+            return timestamp, rc, hostname, service, output
         except UnicodeDecodeError as e:
             # If initial decoding fails...
             logger.warning("[NSCA] Packet output decoding error: %s", str(e))
             logger.warning("[NSCA] Faulty NSCA packet content: %s", binascii.hexlify(data))
-            return (0, 0, '', '', '')
+            return 0, 0, '', '', ''
         except Exception as e:
             logger.warning("[NSCA] Unable to decode NSCA packet: %s", str(e))
             logger.warning("[NSCA] Faulty NSCA packet content: %s", binascii.hexlify(data))
-            return (0, 0, '', '', '')
+            return 0, 0, '', '', ''
 
     def post_command(self, timestamp, rc, hostname, service, output):
-        '''
+        """
         Send an external check result command to the receiver
-        '''
-        if not service or service=='host_check':
+        """
+        if not service or service == 'host_check':
             extcmd = "[%lu] PROCESS_HOST_CHECK_RESULT;%s;%d;%s\n" % \
                 (timestamp, hostname, rc, output)
         else:
@@ -228,7 +226,7 @@ class NSCA_receiver(BaseModule):
         e = ExternalCommand(extcmd)
         self.from_q.put(e)
 
-    def process_check_result(self, databuffer, IV):
+    def process_check_result(self, databuffer, iv):
         # 208 is the size of fixed received data ...
         # NSCA packets are 208+512 (720) or 208+4096 (4304)
         if not databuffer:
@@ -246,7 +244,7 @@ class NSCA_receiver(BaseModule):
             return
 
         (timestamp, rc, hostname, service, output) = self.read_check_result(
-            databuffer, IV, payload_length
+            databuffer, iv, payload_length
         )
         current_time = time.time()
         check_result_age = current_time - timestamp
@@ -274,7 +272,7 @@ class NSCA_receiver(BaseModule):
         server.listen(self.backlog)
         input = [server]
         databuffer = {}
-        IVs = {}
+        ivs = {}
 
         while not self.interrupted:
             # outputready and exceptready unused
@@ -285,7 +283,7 @@ class NSCA_receiver(BaseModule):
                     try:
                         client, _ = server.accept()
                         iv = self.send_init_packet(client)
-                        IVs[client] = iv
+                        ivs[client] = iv
                         input.append(client)
                     except Exception as e:
                         logger.warning("[NSCA] Exception on socket connecting: %s", str(e))
@@ -303,11 +301,11 @@ class NSCA_receiver(BaseModule):
                         continue
 
                     if len(data) == 0:
-                        self.process_check_result(databuffer[s], IVs[s])
+                        self.process_check_result(databuffer[s], ivs[s])
                         try:
                             # Closed socket
                             del databuffer[s]
-                            del IVs[s]
+                            del ivs[s]
                         except:
                             pass
                         s.close()
