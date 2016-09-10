@@ -23,6 +23,18 @@ Short description
 This module for Alignak receiver reads and decodes NSCA passive notifications to dispatch them into the Alignak framework.
 
 
+Features / Known limitations
+----------------------------
+
+Handles NSCA version 3 protocol
+
+Check the NSCA packet timestamp for staled data (older than a certain amount of time) or 'future' data (future timestamp).
+
+Consider the `host_check` service received data as a passive host check. Useful if your NSCA client does not handle correctly the passive host check syntax ;)
+
+The NSCA module implementation is currently limited to the "xor" obfuscation/encryption.
+
+
 Configuration
 -------------------
 
@@ -33,27 +45,20 @@ The default configuration is convenient for 'recent' NSCA client implementing NS
 
 This configuration has been tested with Linux send_nsca 2.9.1 and Windows NSClient most recent versions (from 0.4.1).
 
-.. note::  Received NSCA packets which are not containing version 3 information are dropped by the module!
+**Note:**  Received NSCA packets which are not containing version 3 information are dropped by the module!
 
 To configure Alignak receiver to use this module:
 
     - edit your receiver daemon configuration file
-    - add the `module_alias` parameter value (nsca) to the `modules` parameter of the daemon
+    - add the `module_alias` parameter value (`nsca`) to the `modules` parameter of the daemon
 
 To set up several NSCA listeners:
 
     - copy the default configuration to another file,
-    - change the module alias parameter
+    - change the module alias parameter (`nsca_bis`)
     - change the listening port
     - edit your receiver daemon configuration file
-    - add the new `module_alias` parameter value to the `modules` parameter of the daemon
-
-
-Known limitations
--------------------
-
-.. note::  The NSCA module implementation is currently limited to the "xor" obfuscation/encryption.
-
+    - add the new `module_alias` parameter value (`nsca_bis`) to the `modules` parameter of the daemon
 
 
 Bugs, issues and contributing
