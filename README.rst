@@ -3,20 +3,6 @@ Alignak NSCA receiver Module
 
 *Alignak NSCA module for the Alignak Receiver*
 
-Build status (stable release)
-----------------------------------------
-
-.. image:: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-nsca.svg?branch=master
-    :target: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-nsca
-
-
-Build status (development release)
-----------------------------------------
-
-.. image:: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-nsca.svg?branch=develop
-    :target: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-nsca
-
-
 Short description
 -------------------
 
