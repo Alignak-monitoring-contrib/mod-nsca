@@ -62,7 +62,7 @@ def get_alignak_cfg():
         alignak_etc_default = "/etc/default/alignak"
     else:
         print("Alignak 'default/alignak' file not found. "
-              "You host is probably A Bsd or DragonFly Unix system, else "
+              "You host is probably a BSD or DragonFly Unix system, else "
               "Alignak is not installed on this host!\n"
               "Assuming Unix standard file structure based on /usr/local")
         return alignak_cfg
@@ -175,7 +175,7 @@ for path in alignak_cfg:
     print " %s = %s" % (path, alignak_cfg[path])
 
 # Define installation paths
-# Get Alignak root installation directory
+# Get Alignak root configuration directory
 alignak_etc_path = alignak_cfg['ALIGNAKETC']
 # Get Alignak configuration packs directory
 alignak_modules_path = os.path.join(
@@ -290,7 +290,6 @@ setup(
     include_package_data=True,
     package_data={
         '': 'README.rst',
-        '': 'AUTHORS',
         '': 'LICENSE',
         '': [os.path.join(manifest["__pkg_name__"], '*')],
     },
