@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak contrib team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak contrib projet.
 #
@@ -43,6 +43,7 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 This module is an Alignak Broker module that collects the NSCA passive checks results, checks
 their content and build an external command for the Alignak scheduler.
@@ -61,8 +62,9 @@ import logging
 from alignak.basemodule import BaseModule
 from alignak.external_command import ExternalCommand
 
-logger = logging.getLogger('alignak.module')
+logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
 
+# pylint: disable=C0103
 properties = {
     'daemons': ['receiver'],
     'type': 'nsca',
@@ -352,7 +354,6 @@ class NSCACollector(BaseModule):
                             pass
                         s.close()
                         input.remove(s)
-
 
         logger.info("stopping...")
         logger.info("stopped")
