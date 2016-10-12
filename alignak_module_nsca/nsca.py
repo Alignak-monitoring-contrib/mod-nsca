@@ -43,10 +43,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
-
-# This Class is an NSCA receiver module
-# Here for the configuration phase AND running one
+"""
+This module is an Alignak Broker module that collects the NSCA passive checks results, checks
+their content and build an external command for the Alignak scheduler.
+"""
 
 import time
 import select
@@ -56,9 +56,12 @@ import random
 
 import binascii
 
+import logging
+
 from alignak.basemodule import BaseModule
-from alignak.log import logger
 from alignak.external_command import ExternalCommand
+
+logger = logging.getLogger('alignak.module')
 
 properties = {
     'daemons': ['receiver'],
@@ -69,24 +72,51 @@ properties = {
 
 
 def decrypt_xor(data, key):
+    """
+    Decrypt the provided data using the WOR NSCA algorithm with the provided key
+    :param data: data to decrypt
+    :param key: encryption key
+    :return:
+    """
     keylen = len(key)
     crypted = [chr(ord(data[i]) ^ ord(key[i % keylen])) for i in xrange(len(data))]
     return ''.join(crypted)
 
 
 def get_instance(mod_conf):
-    """ Return a module instance for the plugin manager """
-    logger.info("Get a NSCA receiver module for plugin %s", mod_conf.get_name())
+    """
+    Return a module instance for the modules manager
 
-    instance = NSCA_receiver(mod_conf)
-    return instance
+    :param mod_conf: the module properties as defined globally in this file
+    :return:
+    """
+    logger.info("Give an instance of %s for alias: %s", mod_conf.python_name, mod_conf.module_alias)
+
+    return NSCACollector(mod_conf)
 
 
-class NSCA_receiver(BaseModule):
-    """Please Add a Docstring to describe the class here"""
-
+class NSCACollector(BaseModule):
+    """
+    NSCA collector module main class
+    """
     def __init__(self, mod_conf):
+        """
+        Module initialization
+
+        mod_conf is a dictionary that contains:
+        - all the variables declared in the module configuration file
+        - a 'properties' value that is the module properties as defined globally in this file
+
+        :param mod_conf: module configuration file as a dictionary
+        """
         BaseModule.__init__(self, mod_conf)
+
+        global logger
+        logger = logging.getLogger('alignak.module.%s' % self.alias)
+
+        logger.debug("inner properties: %s", self.__dict__)
+        logger.debug("received configuration: %s", mod_conf.__dict__)
+
 
         self.host = getattr(mod_conf, 'host', '127.0.0.1')
         if self.host == '*':
@@ -101,8 +131,8 @@ class NSCA_receiver(BaseModule):
         self.encryption_method = int(getattr(mod_conf, 'encryption_method', '0'))
         self.password = getattr(mod_conf, 'password', '')
         if self.password == "" and self.encryption_method != 0:
-            logger.error("[NSCA] No password specified whereas an encryption method is defined")
-            logger.warning("[NSCA] Setting password to 'dummy' to avoid crash!")
+            logger.error("No password specified whereas an encryption method is defined")
+            logger.warning("Setting password to 'dummy' to avoid crash!")
             self.password = "dummy"
 
         self.max_packet_age = min(int(getattr(mod_conf, 'max_packet_age', '30')), 900)
@@ -113,7 +143,7 @@ class NSCA_receiver(BaseModule):
         self.rng = random.Random(self.password)
 
         logger.info(
-            "[NSCA] configuration, allowed hosts : '%s'(%s), buffer length: %s, "
+            "configuration, allowed hosts : '%s'(%s), buffer length: %s, "
             "payload length: %s, encryption: %s, max packet age: %s, check future packet: %s, "
             "backlog: %d",
             self.host, self.port, self.buffer_length, self.payload_length,
@@ -177,7 +207,7 @@ class NSCA_receiver(BaseModule):
         if self.encryption_method == 1:
             data = decrypt_xor(data, self.password)
             data = decrypt_xor(data, iv)
-            logger.debug("[NSCA] Decrypted NSCA packet: %s", binascii.hexlify(data))
+            logger.debug("Decrypted NSCA packet: %s", binascii.hexlify(data))
 
         try:
             # Python pack format for NSCA C structure
@@ -196,19 +226,19 @@ class NSCA_receiver(BaseModule):
             # Output only the 64 first bytes of the output ... beware if some specific encoding
             # occurs after :)
             logger.info(
-                "[NSCA] Decoded NSCA packet: host/service: %s/%s, timestamp: %d, output: %s",
+                "Decoded NSCA packet: host/service: %s/%s, timestamp: %d, output: %s",
                 hostname, service, timestamp, output[:64]
             )
-            logger.debug("[NSCA] Decoded NSCA packet: output: --/%s/--", output)
+            logger.debug("Decoded NSCA packet: output: --/%s/--", output)
             return timestamp, rc, hostname, service, output
         except UnicodeDecodeError as e:
             # If initial decoding fails...
-            logger.warning("[NSCA] Packet output decoding error: %s", str(e))
-            logger.warning("[NSCA] Faulty NSCA packet content: %s", binascii.hexlify(data))
+            logger.warning("Packet output decoding error: %s", str(e))
+            logger.warning("Faulty NSCA packet content: %s", binascii.hexlify(data))
             return 0, 0, '', '', ''
         except Exception as e:
-            logger.warning("[NSCA] Unable to decode NSCA packet: %s", str(e))
-            logger.warning("[NSCA] Faulty NSCA packet content: %s", binascii.hexlify(data))
+            logger.warning("Unable to decode NSCA packet: %s", str(e))
+            logger.warning("Faulty NSCA packet content: %s", binascii.hexlify(data))
             return 0, 0, '', '', ''
 
     def post_command(self, timestamp, rc, hostname, service, output):
@@ -223,7 +253,7 @@ class NSCA_receiver(BaseModule):
                 (timestamp, hostname, service, rc, output)
 
         logger.debug(
-            "[NSCA] external command: %s", extcmd
+            "external command: %s", extcmd
         )
 
         e = ExternalCommand(extcmd)
@@ -233,17 +263,17 @@ class NSCA_receiver(BaseModule):
         # 208 is the size of fixed received data ...
         # NSCA packets are 208+512 (720) or 208+4096 (4304)
         if not databuffer:
-            logger.warning("[NSCA] Received an empty NSCA packet")
+            logger.warning("Received an empty NSCA packet")
             return
 
         payload_length = len(databuffer) - 208
         if payload_length != 512 and payload_length != 4096:
             logger.warning(
-                "[NSCA] Received packet with unusual payload length: %d.", payload_length
+                "Received packet with unusual payload length: %d.", payload_length
             )
 
         if self.payload_length != -1 and payload_length != self.payload_length:
-            logger.warning("[NSCA] Dropping packet with incorrect payload length.")
+            logger.warning("Dropping packet with incorrect payload length.")
             return
 
         (timestamp, rc, hostname, service, output) = self.read_check_result(
@@ -252,10 +282,10 @@ class NSCA_receiver(BaseModule):
         current_time = time.time()
         check_result_age = current_time - timestamp
         if timestamp > current_time and self.check_future_packet:
-            logger.info("[NSCA] Dropping packet with future timestamp.")
+            logger.info("Dropping packet with future timestamp.")
         elif check_result_age > self.max_packet_age:
             logger.info(
-                "[NSCA] Dropping packet with stale timestamp - packet was %s seconds old. "
+                "Dropping packet with stale timestamp - packet was %s seconds old. "
                 "Timestamp: %s for %s/%s" % (
                     check_result_age, timestamp, hostname, service
                 )
@@ -265,9 +295,18 @@ class NSCA_receiver(BaseModule):
 
     # Because the module is an "external" one, main loop of your process
     def main(self):
-        self.set_proctitle(self.name)
+        """
+        Main loop of the process
 
+        This module is an "external" module
+        :return:
+        """
+        # Set the OS process title
+        self.set_proctitle(self.alias)
         self.set_exit_handler()
+
+        logger.info("starting...")
+
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setblocking(0)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -289,7 +328,7 @@ class NSCA_receiver(BaseModule):
                         ivs[client] = iv
                         input.append(client)
                     except Exception as e:
-                        logger.warning("[NSCA] Exception on socket connecting: %s", str(e))
+                        logger.warning("Exception on socket connecting: %s", str(e))
                         continue
                 else:
                     # handle all other sockets
@@ -300,7 +339,7 @@ class NSCA_receiver(BaseModule):
                         else:
                             databuffer[s] = data
                     except Exception as e:
-                        logger.warning("[NSCA] Exception on socket receiving: %s", str(e))
+                        logger.warning("Exception on socket receiving: %s", str(e))
                         continue
 
                     if len(data) == 0:
@@ -313,3 +352,7 @@ class NSCA_receiver(BaseModule):
                             pass
                         s.close()
                         input.remove(s)
+
+
+        logger.info("stopping...")
+        logger.info("stopped")
