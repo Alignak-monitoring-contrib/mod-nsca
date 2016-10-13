@@ -113,12 +113,12 @@ class NSCACollector(BaseModule):
         """
         BaseModule.__init__(self, mod_conf)
 
+        # pylint: disable=global-statement
         global logger
         logger = logging.getLogger('alignak.module.%s' % self.alias)
 
         logger.debug("inner properties: %s", self.__dict__)
         logger.debug("received configuration: %s", mod_conf.__dict__)
-
 
         self.host = getattr(mod_conf, 'host', '127.0.0.1')
         if self.host == '*':
