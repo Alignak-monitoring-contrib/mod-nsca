@@ -9,10 +9,10 @@ __pkg_name__ = u"alignak_module_nsca"
 # Module type for PyPI keywords
 # Used for:
 # - PyPI keywords
-__module_type__ = u"nsca"
+__module_types__ = u"passive"
 
 # Application manifest
-__version__ = u"0.2.6"
+__version__ = u"0.2.7"
 __author__ = u"Alignak team"
 __author_email__ = u"frederic.mohier@gmail.com"
 __copyright__ = u"(c) 2015-2016 - %s" % __author__

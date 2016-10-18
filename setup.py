@@ -23,8 +23,8 @@ try:
     python_version = sys.version_info
 except:
     python_version = (1, 5)
-if python_version < (2, 7):
-    sys.exit("This application requires a minimum Python 2.7.x, sorry!")
+if python_version < (2, 6):
+    sys.exit("This application requires a minimum Python 2.6.x, sorry!")
 elif python_version >= (3,):
     sys.exit("This application is not yet compatible with Python 3.x, sorry!")
 
@@ -64,7 +64,7 @@ if not alignak_cfg:
 
 # Build list of all installable package files
 (data_files, to_be_parsed_files, to_be_installed_files) = get_files(
-    alignak_cfg, manifest["__pkg_name__"], manifest["__module_type__"], module=True
+    alignak_cfg, manifest["__pkg_name__"], manifest["__module_types__"], module=True
 )
 
 setup(
@@ -74,7 +74,7 @@ setup(
     # Metadata for PyPI
     author=manifest["__author__"],
     author_email=manifest["__author_email__"],
-    keywords="alignak monitoring module " + manifest["__module_type__"],
+    keywords="alignak monitoring module " + manifest["__module_types__"],
     url=manifest["__url__"],
     license=manifest["__license__"],
     description=manifest["__description__"],
@@ -110,7 +110,7 @@ setup(
     data_files = data_files,
 
     # Dependencies (if some) ...
-    install_requires=[''],
+    install_requires=['alignak_setup'],
 
     # Entry points (if some) ...
     entry_points={
