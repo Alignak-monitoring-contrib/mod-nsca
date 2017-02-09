@@ -292,9 +292,7 @@ class NSCACollector(BaseModule):
         elif check_result_age > self.max_packet_age:
             logger.info(
                 "Dropping packet with stale timestamp - packet was %s seconds old. "
-                "Timestamp: %s for %s/%s" % (
-                    check_result_age, timestamp, hostname, service
-                )
+                "Timestamp: %s" % (check_result_age, timestamp)
             )
         else:
             self.post_command(timestamp, rc, hostname, service, output)
