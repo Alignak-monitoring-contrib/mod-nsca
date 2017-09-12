@@ -49,6 +49,7 @@ This module is an Alignak Broker module that collects the NSCA passive checks re
 their content and build an external command for the Alignak scheduler.
 """
 
+import os
 import time
 import select
 import socket
@@ -225,13 +226,16 @@ class NSCACollector(BaseModule):
             output = output_dirty.split("\0", 1)[0]
             output = output.decode(encoding=self.output_decoding, errors='ignore')
 
-            # Output only the 64 first bytes of the output ... beware if some specific encoding
+            # Output only the 256 first bytes of the output ... beware if some specific encoding
             # occurs after :)
-            logger.info(
+            log_function = logger.debug
+            if 'TEST_LOG_ACTIONS' in os.environ:
+                log_function = logger.info
+
+            log_function(
                 "Decoded NSCA packet: host/service: %s/%s, timestamp: %d, output: %s",
-                hostname, service, timestamp, output[:64]
+                hostname, service, timestamp, output[:256]
             )
-            logger.debug("Decoded NSCA packet: output: --/%s/--", output)
             return timestamp, rc, hostname, service, output
         except UnicodeDecodeError as e:
             # If initial decoding fails...
@@ -288,9 +292,7 @@ class NSCACollector(BaseModule):
         elif check_result_age > self.max_packet_age:
             logger.info(
                 "Dropping packet with stale timestamp - packet was %s seconds old. "
-                "Timestamp: %s for %s/%s" % (
-                    check_result_age, timestamp, hostname, service
-                )
+                "Timestamp: %s" % (check_result_age, timestamp)
             )
         else:
             self.post_command(timestamp, rc, hostname, service, output)
