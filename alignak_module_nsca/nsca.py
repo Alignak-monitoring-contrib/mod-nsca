@@ -327,10 +327,11 @@ class NSCACollector(BaseModule):
                 if s == server:
                     # handle the server socket
                     try:
-                        client, _ = server.accept()
+                        client, address = server.accept()
                         iv = self.send_init_packet(client)
                         ivs[client] = iv
                         input.append(client)
+                        logger.debug("Connection from: %s", address)
                     except Exception as e:
                         logger.warning("Exception on socket connecting: %s", str(e))
                         continue
