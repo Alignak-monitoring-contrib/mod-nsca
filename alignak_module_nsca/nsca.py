@@ -321,8 +321,13 @@ class NSCACollector(BaseModule):
         ivs = {}
 
         while not self.interrupted:
-            # outputready and exceptready unused
-            inputready, _, _ = select.select(input, [], [], 1)
+            try:
+                # outputready and exceptready unused
+                inputready, _, _ = select.select(input, [], [], 1)
+            except Exception as e:
+                logger.warning("Exception on socket select: %s", str(e))
+                continue
+
             for s in inputready:
                 if s == server:
                     # handle the server socket
