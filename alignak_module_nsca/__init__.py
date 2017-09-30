@@ -25,4 +25,3 @@ This package contains the NSCA collector module.
 
 # the properties and get_instance must be available from the top-level:
 from .nsca import properties, get_instance
-
