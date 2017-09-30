@@ -1,0 +1,32 @@
+language: python
+sudo: true
+python:
+#  - "2.6"
+  - "2.7"
+
+script:
+  - pip freeze  # so to help eventual debug: know what exact versions are in use can be rather useful.
+  # Code static analysis
+  - pep8 --max-line-length=100 --exclude='*.pyc, *.cfg, *.log' --ignore='E402' alignak_module_nsca/*
+  #- pylint --rcfile=.pylintrc alignak_module_nsca/*
+
+after_success:
+  - ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION
+
+deploy:
+  - provider: bintray
+    skip_cleanup: true
+    file: .bintray.json
+    user: ddurieux
+    key:
+      secure: "LMt3a9jO3/P3+WxPtOQHhJkYkRz3XpIDbNYnhjVjdBftru7WHY5MvyDhhBxYf0uvwFDkFE/jeVXqg9O9f5N7GpxMEREefAYSievh85TjdQQHdjiLkc4APBku9dgtX3EZ7P+WM867UNEcLmWi3Q5c6XYuIWYgOlMAKxQ5CVy+Ep8IaIWL4H/qKjzTwoB/H0AAgxlokKKzR6Z0YR5GeXHRFrBGzi4qbNvrKaGuXt9k8q2joMqGtH5tR97aIEt1uUadDuVhfyCXRCt7o3ZSN0XFIPYEpsZtrj9DXK7mmT6UN/HgVWjQOVUw3aBjq9E3wV+dYr0hJ5blnSJRO9kNnlUNrlJr9tWiNCKSuU0kjv8TPcq4J7WaAELUbNfEbc+IFoQWW1cqddeQGDyBc75gYauaTnT+ff5LMh1yF2/qOpeN/NTOOVYm3MjQ/+Pj7zOW6xBQZtIsBqH9iHuKCvlv5goG9zPhlz8wFDVS+2QpS2sH8HRB+iZUujoJltVjSKjOBKKKrVGKp2Qx/ahM9cz/bRmORyk5jlTr1UMUEt7q+aictoKBwKqLWw2/TfcxGSZxBCTxzHuP7bFAUF4rHoFux9a06QHpciXjIHd6Q52MQXgIuWhfKW9Daw3THQTMurMEF5DSh61N0DpgKk8pY/M+DMhf8lO1JkP8woCDt12R0heMPXU="
+    on:
+      branch: develop
+  - provider: bintray
+    skip_cleanup: true
+    file: .bintray.json
+    user: ddurieux
+    key:
+      secure: "LMt3a9jO3/P3+WxPtOQHhJkYkRz3XpIDbNYnhjVjdBftru7WHY5MvyDhhBxYf0uvwFDkFE/jeVXqg9O9f5N7GpxMEREefAYSievh85TjdQQHdjiLkc4APBku9dgtX3EZ7P+WM867UNEcLmWi3Q5c6XYuIWYgOlMAKxQ5CVy+Ep8IaIWL4H/qKjzTwoB/H0AAgxlokKKzR6Z0YR5GeXHRFrBGzi4qbNvrKaGuXt9k8q2joMqGtH5tR97aIEt1uUadDuVhfyCXRCt7o3ZSN0XFIPYEpsZtrj9DXK7mmT6UN/HgVWjQOVUw3aBjq9E3wV+dYr0hJ5blnSJRO9kNnlUNrlJr9tWiNCKSuU0kjv8TPcq4J7WaAELUbNfEbc+IFoQWW1cqddeQGDyBc75gYauaTnT+ff5LMh1yF2/qOpeN/NTOOVYm3MjQ/+Pj7zOW6xBQZtIsBqH9iHuKCvlv5goG9zPhlz8wFDVS+2QpS2sH8HRB+iZUujoJltVjSKjOBKKKrVGKp2Qx/ahM9cz/bRmORyk5jlTr1UMUEt7q+aictoKBwKqLWw2/TfcxGSZxBCTxzHuP7bFAUF4rHoFux9a06QHpciXjIHd6Q52MQXgIuWhfKW9Daw3THQTMurMEF5DSh61N0DpgKk8pY/M+DMhf8lO1JkP8woCDt12R0heMPXU="
+    on:
+      tags: true

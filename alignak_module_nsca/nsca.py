@@ -71,7 +71,7 @@ properties = {
     'type': 'nsca',
     'external': True,
     'phases': ['running'],
-    }
+}
 
 
 def decrypt_xor(data, key):
@@ -219,7 +219,7 @@ class NSCACollector(BaseModule):
 
             # version, pad1, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty, pad2
             # are the name of unpacked structure elements
-            (version, pad, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty, _) = \
+            (_, _, _, timestamp, rc, hostname_dirty, service_dirty, output_dirty, _) = \
                 struct.unpack(unpack_format, data)
             hostname = hostname_dirty.split("\0", 1)[0]
             service = service_dirty.split("\0", 1)[0]
@@ -266,6 +266,12 @@ class NSCACollector(BaseModule):
         self.from_q.put(e)
 
     def process_check_result(self, databuffer, iv):
+        """Process the check result to extract the information
+
+        :param databuffer:
+        :param iv:
+        :return: None
+        """
         # 208 is the size of fixed received data ...
         # NSCA packets are 208+512 (720) or 208+4096 (4304)
         if not databuffer:
