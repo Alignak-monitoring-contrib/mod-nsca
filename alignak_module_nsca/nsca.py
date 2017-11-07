@@ -63,9 +63,12 @@ import logging
 from alignak.basemodule import BaseModule
 from alignak.external_command import ExternalCommand
 
-logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+for handler in logger.parent.handlers:
+    if isinstance(handler, logging.StreamHandler):
+        logger.parent.removeHandler(handler)
 
-# pylint: disable=C0103
+# pylint: disable=invalid-name
 properties = {
     'daemons': ['receiver'],
     'type': 'nsca',
@@ -117,6 +120,7 @@ class NSCACollector(BaseModule):
         # pylint: disable=global-statement
         global logger
         logger = logging.getLogger('alignak.module.%s' % self.alias)
+        logger.setLevel(getattr(mod_conf, 'log_level', logging.INFO))
 
         logger.debug("inner properties: %s", self.__dict__)
         logger.debug("received configuration: %s", mod_conf.__dict__)
