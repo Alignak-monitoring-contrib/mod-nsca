@@ -1,6 +1,9 @@
 Alignak NSCA receiver Module
 ============================
 
+**Note** that this module is not yet tested with the most recent (> 2) version of Alignak.
+-----
+
 *Alignak NSCA module for the Alignak Receiver*
 
 .. image:: https://landscape.io/github/Alignak-monitoring-contrib/alignak-module-nsca/develop/landscape.svg?style=flat
