@@ -60,6 +60,8 @@ import binascii
 
 import logging
 
+from builtins import range
+
 from alignak.basemodule import BaseModule
 from alignak.external_command import ExternalCommand
 
@@ -82,7 +84,7 @@ def decrypt_xor(data, key):
     :return:
     """
     keylen = len(key)
-    crypted = [chr(ord(data[i]) ^ ord(key[i % keylen])) for i in xrange(len(data))]
+    crypted = [chr(ord(data[i]) ^ ord(key[i % keylen])) for i in range(len(data))]
     return ''.join(crypted)
 
 
@@ -145,12 +147,12 @@ class NSCACollector(BaseModule):
 
         self.rng = random.Random(self.password)
 
-        logger.info(
-            "configuration, allowed hosts : '%s'(%s), buffer length: %s, "
-            "payload length: %s, encryption: %s, max packet age: %s, check future packet: %s, "
-            "backlog: %d",
-            self.host, self.port, self.buffer_length, self.payload_length,
-            self.encryption_method, self.max_packet_age, self.check_future_packet, self.backlog)
+        logger.info("configuration, allowed hosts : '%s'(%s), buffer length: %s, "
+                    "payload length: %s, encryption: %s, max packet age: %s, "
+                    "check future packet: %s, backlog: %d",
+                    self.host, self.port, self.buffer_length, self.payload_length,
+                    self.encryption_method, self.max_packet_age, self.check_future_packet,
+                    self.backlog)
 
     def send_init_packet(self, sock):
         """
@@ -158,12 +160,14 @@ class NSCACollector(BaseModule):
          00-127: IV
          128-131: unix timestamp
         """
-        iv = ''.join([chr(self.rng.randrange(256)) for i in xrange(128)])
+        # pylint: disable=unused-variable
+        iv = ''.join([chr(self.rng.randrange(256)) for i in range(128)])
         init_packet = struct.pack("!128sI", iv, int(time.time()))
         sock.send(init_packet)
         return iv
 
     def read_check_result(self, data, iv, payload_length):
+        # pylint: disable=too-many-locals
         """
         Read the check result
 
@@ -217,8 +221,8 @@ class NSCACollector(BaseModule):
             # Depending on requested payload length
             unpack_format = "!hhIIh64s128s%ssh" % payload_length
 
-            # version, pad1, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty, pad2
-            # are the name of unpacked structure elements
+            # version, pad1, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty,
+            # pad2 are the name of unpacked structure elements
             (_, _, _, timestamp, rc, hostname_dirty, service_dirty, output_dirty, _) = \
                 struct.unpack(unpack_format, data)
             hostname = hostname_dirty.split("\0", 1)[0]
@@ -229,13 +233,11 @@ class NSCACollector(BaseModule):
             # Output only the 256 first bytes of the output ... beware if some specific encoding
             # occurs after :)
             log_function = logger.debug
-            if 'TEST_LOG_ACTIONS' in os.environ:
+            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
                 log_function = logger.info
 
-            log_function(
-                "Decoded NSCA packet: host/service: %s/%s, timestamp: %d, output: %s",
-                hostname, service, timestamp, output[:256]
-            )
+            log_function("Decoded NSCA packet: host/service: %s/%s, timestamp: %d, output: %s",
+                         hostname, service, timestamp, output[:256])
             return timestamp, rc, hostname, service, output
         except UnicodeDecodeError as e:
             # If initial decoding fails...
@@ -248,6 +250,7 @@ class NSCACollector(BaseModule):
             return 0, 0, '', '', ''
 
     def post_command(self, timestamp, rc, hostname, service, output):
+        # pylint: disable=too-many-arguments
         """
         Send an external check result command to the receiver
         """
@@ -279,29 +282,29 @@ class NSCACollector(BaseModule):
             return
 
         payload_length = len(databuffer) - 208
-        if payload_length != 512 and payload_length != 4096:
-            logger.warning(
-                "Received packet with unusual payload length: %d.", payload_length
-            )
+        if payload_length not in [512, 4096]:
+            logger.warning("Received packet with unusual payload length: %d.", payload_length)
 
         if self.payload_length != -1 and payload_length != self.payload_length:
             logger.warning("Dropping packet with incorrect payload length.")
             return
 
-        (timestamp, rc, hostname, service, output) = self.read_check_result(
-            databuffer, iv, payload_length
-        )
+        (timestamp, rc, hostname, service, output) = self.read_check_result(databuffer, iv,
+                                                                            payload_length)
         current_time = time.time()
         check_result_age = current_time - timestamp
         if timestamp > current_time and self.check_future_packet:
             logger.info("Dropping packet with future timestamp.")
         elif check_result_age > self.max_packet_age:
-            logger.info(
-                "Dropping packet with stale timestamp - packet was %s seconds old. "
-                "Timestamp: %s" % (check_result_age, timestamp)
-            )
+            logger.info("Dropping packet with stale timestamp - packet was %s seconds old. "
+                        "Timestamp: %s", check_result_age, timestamp)
         else:
             self.post_command(timestamp, rc, hostname, service, output)
+
+    def do_loop_turn(self):
+        """This function is present because of an abstract function in the BaseModule class"""
+        logger.info("In loop")
+        time.sleep(1)
 
     # Because the module is an "external" one, main loop of your process
     def main(self):
@@ -322,14 +325,14 @@ class NSCACollector(BaseModule):
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((self.host, self.port))
         server.listen(self.backlog)
-        input = [server]
+        input_sockets = [server]
         databuffer = {}
         ivs = {}
 
         while not self.interrupted:
             try:
                 # outputready and exceptready unused
-                inputready, _, _ = select.select(input, [], [], 1)
+                inputready, _, _ = select.select(input_sockets, [], [], 1)
             except Exception as e:
                 logger.warning("Exception on socket select: %s", str(e))
                 continue
@@ -341,7 +344,7 @@ class NSCACollector(BaseModule):
                         client, address = server.accept()
                         iv = self.send_init_packet(client)
                         ivs[client] = iv
-                        input.append(client)
+                        input_sockets.append(client)
                         logger.debug("Connection from: %s", address)
                     except Exception as e:
                         logger.warning("Exception on socket connecting: %s", str(e))
@@ -358,16 +361,16 @@ class NSCACollector(BaseModule):
                         logger.warning("Exception on socket receiving: %s", str(e))
                         continue
 
-                    if len(data) == 0:
+                    if not data:
                         self.process_check_result(databuffer[s], ivs[s])
                         try:
                             # Closed socket
                             del databuffer[s]
                             del ivs[s]
-                        except:
+                        except Exception:
                             pass
                         s.close()
-                        input.remove(s)
+                        input_sockets.remove(s)
 
         logger.info("stopping...")
         logger.info("stopped")

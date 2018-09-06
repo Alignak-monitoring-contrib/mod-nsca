@@ -102,7 +102,7 @@ setup(
     data_files = data_files,
 
     # Dependencies (if some) ...
-    install_requires=[],
+    install_requires=['alignak'],
 
     # Entry points (if some) ...
     entry_points={

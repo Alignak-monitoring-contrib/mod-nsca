@@ -16,10 +16,9 @@ script:
   # Code dynamic analysis and tests
   - cd test
   # Run test suite with py.test running its coverage plugin
-  # No tests existing now!
-  # - pytest --verbose --durations=10 --no-print-logs --cov=alignak_module_nsca --cov-config .coveragerc test_*.py
+  - pytest --verbose --durations=10 --no-print-logs --cov=alignak_module_nsca --cov-config .coveragerc test_*.py
   # Report about coverage - Upload coverage results to codecov
-  # - bash <(curl -s https://codecov.io/bash)
+  - bash <(curl -s https://codecov.io/bash)
   - cd ..
 
 jobs:

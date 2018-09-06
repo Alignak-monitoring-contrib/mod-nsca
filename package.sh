@@ -70,7 +70,7 @@ if [ "${python_version}" = "2.7" ]; then
 fi
 
 # Package information - no more python-prefix but kept for compatibility
-pkg_name="${python_prefix}-alignak-module-nscalogs"
+pkg_name="${python_prefix}-alignak-module-nsca"
 pkg_description="Alignak NSCA module"
 pkg_url="http://alignak.net"
 pkg_team="Alignak Team (contact@alignak.net)"

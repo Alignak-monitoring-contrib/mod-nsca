@@ -1,8 +1,10 @@
 # Python requirements for unit tests
 -r ../requirements.txt
 
-# alignak
--e git+https://github.com/Alignak-monitoring/alignak.git@develop#egg=alignak
+requests
+requests_mock
+configparser
+psutil
 
 # Let coverage use the most recent version
 coverage
