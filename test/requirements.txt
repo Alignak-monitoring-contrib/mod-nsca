@@ -4,16 +4,18 @@
 # alignak
 -e git+https://github.com/Alignak-monitoring/alignak.git@develop#egg=alignak
 
-unittest2
-# Use py.test as test-runner
-pytest
-pytest-cov
 # Let coverage use the most recent version
 coverage
-# Report coverage results to coveralls.io
-coveralls
+
+# Report coverage results to codecov
+codecov
+
 # Static code analysis libraries
 pylint
-pep8
+pycodestyle
 pep257
 
+# Use py.test as test-runner
+unittest2
+pytest
+pytest-cov
