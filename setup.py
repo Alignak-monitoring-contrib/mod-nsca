@@ -10,16 +10,6 @@ try:
 except:
     sys.exit("Error: missing python-setuptools library")
 
-try:
-    python_version = sys.version_info
-except:
-    python_version = (1, 5)
-if python_version < (2, 6):
-    sys.exit("This application requires a minimum Python 2.6.x, sorry!")
-elif python_version >= (3,):
-    sys.exit("This application is not yet compatible with Python 3.x, sorry!")
-
-
 # Better to use exec to load the package information from a version.py file
 # so to not have to import the package. as of it, the setup.py do not need to be modified
 # for each package that is built from this one...
@@ -52,7 +42,7 @@ for subdir, dirs, files in os.walk(package_name):
                                      "", subdir))
     # Configuration directory
     elif subdir and 'etc' in subdir:
-        target = os.path.join('etc/alignak',
+        target = os.path.join('share/alignak/etc',
                               re.sub(r"^(%s\/|%s$)" % (
                                   os.path.join(package_name, 'etc'),
                                   os.path.join(package_name, 'etc')),
@@ -112,7 +102,7 @@ setup(
     data_files = data_files,
 
     # Dependencies (if some) ...
-    install_requires=[],
+    install_requires=['alignak'],
 
     # Entry points (if some) ...
     entry_points={
