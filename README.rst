@@ -28,22 +28,47 @@ Installation
 
 The installation of this module will copy some configuration files in the Alignak default configuration directory (eg. */usr/local/etc/alignak*). The copied files are located in the default sub-directory used for the modules (eg. *arbiter/modules*).
 
+From Alignak packages repositories
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+More information in the `online Alignak documentation <http://docs.alignak.net>`_. Here is only an abstract...
+
+Debian::
+
+    # Alignak DEB stable packages
+    sudo echo deb https://dl.bintray.com/alignak/alignak-deb-stable xenial main | sudo tee -a /etc/apt/sources.list.d/alignak.list
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv D401AB61
+
+    sudo apt-get update
+    sudo apt install python-alignak-module-nsca
+
+CentOS::
+
+    sudo vi /etc/yum.repos.d/alignak-stable.repo:
+       [Alignak-rpm-stable]
+       name=Alignak RPM stable packages
+       baseurl=https://dl.bintray.com/alignak/alignak-rpm-stable
+       gpgcheck=0
+       repo_gpgcheck=0
+       enabled=1
+
+    sudo yum repolist
+    sudo yum install python-alignak-module-nsca
+
 From PyPI
 ~~~~~~~~~
-To install the module from PyPI:
-::
+To install the module from PyPI::
 
-   sudo pip install alignak-module-nsca
+    sudo pip install alignak-module-nsca
 
 
 From source files
 ~~~~~~~~~~~~~~~~~
-To install the module from the source files (for developing purpose):
-::
+To install the module from the source files (for developing purpose)::
 
-   git clone https://github.com/Alignak-monitoring-contrib/alignak-module-nsca
-   cd alignak-module-nsca
-   sudo pip install . -e
+    git clone https://github.com/Alignak-monitoring-contrib/alignak-module-nsca
+    cd alignak-module-nsca
+    sudo pip install . -e
 
 **Note:** *using `sudo python setup.py install` will not correctly manage the package configuration files! The recommended way is really to use `pip`;)*
 
@@ -65,18 +90,19 @@ Consider the `host_check` service received data as a passive host check. Useful 
 
 The NSCA module implementation is currently limited to the "xor" obfuscation/encryption.
 
+.. note:: To make the module add some information in the daemon log file, define the ``ALIGNAK_LOG_ACTIONS`` environment variable. It will dump a part of the received NSCA packets...
 
 Configuration
 -------------
 
-Once installed, this module has its own configuration file in the */usr/local/etc/alignak/arbiter_cfg/modules* directory.
-The default configuration file is *mod-nsca.cfg*. This file is commented to help configure all the parameters.
+Once installed, this module has its own configuration file in the */usr/local/share/alignak/etc/alignak.d* directory.
+The default configuration file is *alignak-module-nsca.ini*. This file is commented to help configure all the parameters.
 
 The default configuration is convenient for 'recent' NSCA client implementing NSCA version 3.
 
 This configuration has been tested with Linux send_nsca 2.9.1 and Windows NSClient most recent versions (from 0.4.1).
 
-**Note:**  Received NSCA packets which are not containing version 3 information are dropped by the module!
+.. note:: received NSCA packets which are not containing version 3 information are dropped by the module!
 
 To configure Alignak receiver to use this module:
 

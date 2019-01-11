@@ -17,7 +17,7 @@ __pkg_name__ = u"alignak_module_nsca"
 __module_types__ = u"passive"
 
 # Application manifest
-__version__ = u"1.0.0"
+__version__ = u"2.0.0"
 __author__ = u"Frédéric Mohier"
 __author_email__ = u"frederic.mohier@alignak.net"
 __copyright__ = u"(c) 2015-2017 - %s" % __author__

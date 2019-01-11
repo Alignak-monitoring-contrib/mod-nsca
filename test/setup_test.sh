@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
+#!/usr/bin/env bash
 #
 # Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -19,9 +17,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-This package contains the NSCA collector module.
-"""
+set -e
 
-# the properties and get_instance must be available from the top-level:
-from .nsca import properties, get_instance
+THIS_PATH=$(dirname "$0")
+BASE_PATH=$(dirname "$THIS_PATH")
+
+cd $BASE_PATH
+
+pip install --upgrade pip
+
+# install prog AND tests requirements :
+pip install -r requirements.txt
+pip install -e .
+pip install --upgrade -r test/requirements.txt
+
