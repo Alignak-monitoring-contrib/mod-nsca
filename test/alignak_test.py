@@ -179,7 +179,7 @@ class AlignakTest(unittest2.TestCase):
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         logger_.setLevel(log_level)
         for handler in logger_.handlers:
-            print("- handler: %s" % handler)
+            # print("- handler: %s" % handler)
             handler.setLevel(log_level)
             if getattr(handler, '_name', None) == 'unit_tests':
                 self.former_log_level = handler.level
@@ -310,7 +310,7 @@ define host {
             lines = []
             with open(filename) as infile:
                 for line in infile:
-                    for src, target in list(replacements.items()):
+                    for src, target in replacements.items():
                         line = line.replace(src, target)
                     lines.append(line)
             with open(filename, 'w') as outfile:
@@ -364,7 +364,7 @@ define host {
             for name, proc in list(self.procs.items()):
                 if arbiter_only and name not in ['arbiter-master']:
                     continue
-                if proc.pid == self.my_pid:
+                if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
                     print("- do not kill myself!")
                     continue
                 print("Asking %s (pid=%d) to end..." % (name, proc.pid))
@@ -404,11 +404,14 @@ define host {
                     daemon_process = psutil.Process(proc.pid)
                     daemon_process.terminate()
                     daemon_process.wait(10)
+                except psutil.AccessDenied:
+                    print("-> access denied...")
+                    continue
                 except psutil.NoSuchProcess:
-                    print("not existing!")
+                    print("-> not existing!")
                     continue
                 except psutil.TimeoutExpired:
-                    print("***** timeout 10 seconds, force-killing the daemon...")
+                    print("-> timeout 10 seconds, force-killing the daemon...")
                     daemon_process.kill()
 
     def _run_command_with_timeout(self, cmd, timeout_sec):
@@ -783,8 +786,8 @@ define host {
             # self._arbiter.debug = True
             self._arbiter.setup_alignak_logger()
 
-            # Setup our modules manager
-            self._arbiter.load_modules_manager()
+            # # Setup our modules manager
+            # self._arbiter.load_modules_manager()
 
             # Load and initialize the arbiter configuration
             self._arbiter.load_monitoring_config_file()
@@ -826,8 +829,6 @@ define host {
         with requests_mock.mock() as mr:
             for link in self._arbiter.dispatcher.all_daemons_links:
                 # mr.get('http://%s:%s/ping' % (link.address, link.port), json='pong')
-                mr.get('http://%s:%s/' % (link.address, link.port),
-                       json={"running_id": 123456.123456})
                 mr.get('http://%s:%s/identity' % (link.address, link.port),
                        json={"running_id": 123456.123456})
                 mr.get('http://%s:%s/_wait_new_conf' % (link.address, link.port), json=True)
@@ -870,7 +871,7 @@ define host {
                     'env_file': self.env_filename, 'daemon_name': scheduler.name,
                 }
                 self._scheduler_daemon = Alignak(**args)
-                self._scheduler_daemon.load_modules_manager()
+                # self._scheduler_daemon.load_modules_manager()
 
                 # Simulate the scheduler daemon receiving the configuration from its arbiter
                 pushed_configuration = scheduler.unit_test_pushed_configuration
@@ -893,7 +894,7 @@ define host {
                     'env_file': self.env_filename, 'daemon_name': broker.name,
                 }
                 self._broker_daemon = Broker(**args)
-                self._broker_daemon.load_modules_manager()
+                # self._broker_daemon.load_modules_manager()
 
                 # Simulate the scheduler daemon receiving the configuration from its arbiter
                 pushed_configuration = broker.unit_test_pushed_configuration
@@ -917,7 +918,7 @@ define host {
                     'env_file': self.env_filename, 'daemon_name': receiver.name,
                 }
                 self._receiver_daemon = Receiver(**args)
-                self._receiver_daemon.load_modules_manager()
+                # self._receiver_daemon.load_modules_manager()
 
                 # Simulate the scheduler daemon receiving the configuration from its arbiter
                 pushed_configuration = receiver.unit_test_pushed_configuration
@@ -1129,7 +1130,7 @@ define host {
         if verbose is True:
             self.show_actions()
         for a in actions:
-            a.status = 'in_poller'
+            a.status = u'in_poller'
             a.check_time = time.time()
             a.exit_status = 0
             self._scheduler.put_results(a)
@@ -1166,7 +1167,8 @@ define host {
             if isinstance(handler, CollectorHandler):
                 print("--- logs <<<----------------------------------")
                 for log in handler.collector:
-                    self.safe_print(log)
+                    # self.safe_print(log)
+                    print(log)
                 print("--- logs >>>----------------------------------")
                 break
         else:
@@ -1308,7 +1310,7 @@ define host {
                                     'planned: %s, command: %s' %
                                     (idx, b.creation_time, b.is_a, b.type,
                                      b.status, b.t_to_go, b.command)
-                                    for idx, b in enumerate(sorted(list(self._scheduler.actions.values()),
+                                    for idx, b in enumerate(sorted(self._scheduler.actions.values(),
                                                                    key=lambda x: (x.creation_time,
                                                                                   x.t_to_go))))))
 
@@ -1328,7 +1330,7 @@ define host {
         :return: None
         """
         regex = re.compile(pattern)
-        actions = sorted(list(self._scheduler.actions.values()), key=lambda x: (x.t_to_go, x.creation_time))
+        actions = sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))
         if index != -1:
             myaction = actions[index]
             self.assertTrue(regex.search(getattr(myaction, field)),
@@ -1834,7 +1836,7 @@ define host {
         for coding in possible_codings:
             data = ' '.join(make_in_data_gen()).encode(coding, 'xmlcharrefreplace')
             try:
-                sys.stdout.write(data)
+                sys.stdout.write(str(data))
                 break
             except UnicodeError as err:
                 # there might still have some problem with the underlying sys.stdout.
@@ -1845,4 +1847,4 @@ define host {
                     raise
                 sys.stderr.write('Error on write to sys.stdout with %s encoding: err=%s\nTrying with ascii' % (
                     coding, err))
-        sys.stdout.write(b'\n')
+        sys.stdout.write('\n')
