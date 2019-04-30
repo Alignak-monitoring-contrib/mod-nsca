@@ -51,6 +51,7 @@ their content and build an external command for the Alignak scheduler.
 
 import os
 import time
+import datetime
 import select
 import socket
 import struct
@@ -123,6 +124,28 @@ class NSCACollector(BaseModule):
         logger.debug("inner properties: %s", self.__dict__)
         logger.debug("received configuration: %s", mod_conf.__dict__)
 
+        self.test_logger = None
+        if getattr(mod_conf, 'test_logger', None) is not None:
+            logger.info("Specific logger test configuration: %s",
+                        getattr(mod_conf, 'test_logger', None))
+            self.test_logger = logging.getLogger('test-logger')
+            self.test_logger.setLevel(logging.DEBUG)
+
+            # create file handler which logs even debug messages
+            file_name = getattr(mod_conf, 'test_logger')
+            fh = logging.FileHandler(file_name)
+            fh.setLevel(logging.DEBUG)
+            self.test_logger.addHandler(fh)
+
+            # if os.path.isfile(file_name):
+            #     os.remove(file_name)
+            #
+            self.test_logger.debug("-----")
+            now = datetime.datetime.now()
+            self.test_logger.debug("%s: Test logger configured", now.strftime("%Y-%m-%d %H:%M"))
+            self.test_logger.debug("-----")
+            logger.info("Specific logger test done!")
+
         self.host = getattr(mod_conf, 'host', '127.0.0.1')
         if self.host == '*':
             self.host = ''
@@ -161,7 +184,7 @@ class NSCACollector(BaseModule):
          128-131: unix timestamp
         """
         # pylint: disable=unused-variable
-        iv = ''.join([chr(self.rng.randrange(256)) for i in range(128)])
+        iv = bytearray([self.rng.randrange(256) for _ in range(128)])
         init_packet = struct.pack("!128sI", iv, int(time.time()))
         sock.send(init_packet)
         return iv
@@ -211,6 +234,10 @@ class NSCACollector(BaseModule):
         }init_packet;
         """
 
+        logger.info("Got NSCA packet: %s", binascii.hexlify(data))
+        if self.test_logger:
+            self.test_logger.debug("Got NSCA packet: %s", binascii.hexlify(data))
+
         if self.encryption_method == 1:
             data = decrypt_xor(data, self.password)
             data = decrypt_xor(data, iv)
@@ -221,14 +248,31 @@ class NSCACollector(BaseModule):
             # Depending on requested payload length
             unpack_format = "!hhIIh64s128s%ssh" % payload_length
 
-            # version, pad1, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty,
-            # pad2 are the name of unpacked structure elements
-            (_, _, _, timestamp, rc, hostname_dirty, service_dirty, output_dirty, _) = \
-                struct.unpack(unpack_format, data)
-            hostname = hostname_dirty.split("\0", 1)[0]
-            service = service_dirty.split("\0", 1)[0]
-            output = output_dirty.split("\0", 1)[0]
-            output = output.decode(encoding=self.output_decoding, errors='ignore')
+            if self.test_logger:
+                self.test_logger.debug("Unpack format: %s", unpack_format)
+
+            try:
+                # version, pad1, crc32, timestamp, rc, hostname_dirty, service_dirty, output_dirty,
+                # pad2 are the name of unpacked structure elements
+                (_, _, _, timestamp, rc, hostname_dirty, service_dirty, output_dirty, _) = \
+                    struct.unpack(unpack_format, data)
+            except Exception as exp:
+                self.test_logger.debug("Unpack failed! %s", str(exp))
+                return 0, 0, '', '', ''
+
+            try:
+                hostname = str(hostname_dirty, self.output_decoding).split("\0")[0]
+                service = str(service_dirty, self.output_decoding).split("\0")[0]
+                output = str(output_dirty, self.output_decoding).split("\0")[0]
+                # output = output.decode(encoding=self.output_decoding, errors='ignore')
+            except Exception as exp:
+                if self.test_logger:
+                    self.test_logger.debug("Decode failed! %s", str(exp))
+
+            if self.test_logger:
+                self.test_logger.debug("Host / service: %s / %s", hostname, service)
+                self.test_logger.debug("Result code: %s", rc)
+                self.test_logger.debug("Output: %s", output)
 
             # Output only the 256 first bytes of the output ... beware if some specific encoding
             # occurs after :)
@@ -326,7 +370,8 @@ class NSCACollector(BaseModule):
         server.bind((self.host, self.port))
         server.listen(self.backlog)
         input_sockets = [server]
-        databuffer = {}
+
+        data_buffer = {}
         ivs = {}
 
         while not self.interrupted:
@@ -346,6 +391,7 @@ class NSCACollector(BaseModule):
                         ivs[client] = iv
                         input_sockets.append(client)
                         logger.debug("Connection from: %s", address)
+                        logger.info("Connection from: %s", address)
                     except Exception as e:
                         logger.warning("Exception on socket connecting: %s", str(e))
                         continue
@@ -353,19 +399,19 @@ class NSCACollector(BaseModule):
                     # handle all other sockets
                     try:
                         data = s.recv(self.buffer_length)
-                        if s in databuffer:
-                            databuffer[s] += data
+                        if s in data_buffer:
+                            data_buffer[s] += data
                         else:
-                            databuffer[s] = data
+                            data_buffer[s] = data
                     except Exception as e:
                         logger.warning("Exception on socket receiving: %s", str(e))
                         continue
 
                     if not data:
-                        self.process_check_result(databuffer[s], ivs[s])
+                        self.process_check_result(data_buffer[s], ivs[s])
                         try:
                             # Closed socket
-                            del databuffer[s]
+                            del data_buffer[s]
                             del ivs[s]
                         except Exception:
                             pass
