@@ -185,7 +185,7 @@ class NSCACollector(BaseModule):
         """
         # pylint: disable=unused-variable
         iv = bytearray([self.rng.randrange(256) for _ in range(128)])
-        init_packet = struct.pack("!128sI", iv, int(time.time()))
+        init_packet = struct.pack("!128sI", iv.encode('utf-8'), int(time.time()))
         sock.send(init_packet)
         return iv
 
